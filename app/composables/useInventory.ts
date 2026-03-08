@@ -13,16 +13,29 @@ export function useInventory(size: number) {
 		item: ItemInstance,
 		newPos: InventoryPosition,
 	): boolean {
-		const oldItem = item.ref;
-		if (!isFree(item.ref, newPos)) return false;
+		if (!isFree(item.ref, newPos, item)) return false;
 
 		deleteItem(item);
-		addItem(oldItem, newPos);
+
+		// update the existing instance in-place instead of creating a new one
+		item.pos = newPos;
+
+		for (const [index, cell] of item.ref.layout.entries()) {
+			if (cell === 0) continue;
+			const row = Math.floor(index / item.ref.size.width);
+			const col = index % item.ref.size.width;
+
+			const inventoryRow = row + newPos.row;
+			const inventoryCol = col + newPos.col;
+
+			const inventoryIndex = inventoryRow * size + inventoryCol;
+			inventory.value[inventoryIndex] = item;
+		}
 
 		return true;
 	}
 
-	function isFree(item: Item, pos: InventoryPosition): boolean {
+	function isFree(item: Item, pos: InventoryPosition, ignore?: ItemInstance): boolean {
 		for (const [index, cell] of item.layout.entries()) {
 			if (cell === 0) continue;
 			let row = (index - (index % item.size.width)) / item.size.width;
@@ -35,7 +48,8 @@ export function useInventory(size: number) {
 
 			if (inventoryRow >= size || inventoryCol >= size) return false;
 			const inventoryIndex = inventoryRow * size + inventoryCol;
-			if (inventory.value[inventoryIndex] !== null) return false;
+			const occupant = inventory.value[inventoryIndex];
+			if (occupant !== null && occupant !== ignore) return false;
 		}
 		return true;
 	}
@@ -64,9 +78,9 @@ export function useInventory(size: number) {
 
 	function deleteItem(item: ItemInstance): boolean {
 		let found = false;
-		for (const index in inventory) {
-			if (inventory.value[index] === item) {
-				inventory.value[index] = null;
+		for (let i = 0; i < inventory.value.length; i++) {
+			if (inventory.value[i] === item) {
+				inventory.value[i] = null;
 				found = true;
 			}
 		}

@@ -21,3 +21,5 @@ export type ItemSize = {
 	width: number;
 	height: number;
 };
+
+export type Offset = { x: number; y: number };

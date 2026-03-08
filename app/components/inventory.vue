@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import { instance } from "three/tsl";
-
 type Props = {
   inventory: Array<ItemInstance | null>;
   size: number;
+  isFree: (item: Item, pos: InventoryPosition, ignore?: ItemInstance) => boolean;
+  tryUpdateItem: (item: ItemInstance, newPos: InventoryPosition) => boolean;
 };
 
-const { inventory, size } = defineProps<Props>();
+const { inventory, size, isFree, tryUpdateItem } = defineProps<Props>();
+
+const itemsContainer = ref<HTMLElement | null>(null);
+const { isDragging, draggedItem, dragPosition, highlightedCells } = useDrag({
+  containerRef: itemsContainer,
+  gridSize: size,
+  isFree,
+  onDrop: (item, pos) => tryUpdateItem(item, pos),
+});
 
 const cellSize = computed(() => {
   return 100 / size;
@@ -27,21 +35,34 @@ const uniqueItemInstances = computed(() => {
   <div
     class="z-10 absolute bg-black/80 backdrop-blur-xl rounded-xl size-80 top-1/2 left-1/2 -translate-1/2 grid grid-cols-5 grid-rows-5 p-1"
   >
-    <div v-for="i in size * size" class="p-1 group">
+    <div v-for="(_, i) in size * size" class="p-1 group">
       <div
-        class="size-full grid place-items-center border-white/10 border rounded-lg"
+        class="size-full grid place-items-center border-white/10 border rounded-lg transition-colors duration-150"
+        :class="highlightedCells.has(i) ? 'bg-white/20' : ''"
       ></div>
     </div>
-    <div class="absolute size-full">
+    <div ref="itemsContainer" class="absolute size-full">
       <UiItem
-        v-for="item in uniqueItemInstances"
+        v-for="itemInstance in uniqueItemInstances"
         class="absolute"
+        :class="draggedItem === itemInstance ? 'opacity-0' : ''"
         :style="[
-          `left: ${item.pos.col * cellSize}%`,
-          `top: ${item.pos.row * cellSize}%`,
+          `left: ${itemInstance.pos.col * cellSize}%`,
+          `top: ${itemInstance.pos.row * cellSize}%`,
         ]"
-        :item="item.ref"
+        :item="itemInstance"
         :grid-size="size"
+      />
+
+      <UiItem
+        v-if="isDragging && draggedItem"
+        :item="draggedItem"
+        :grid-size="size"
+        class="absolute pointer-events-none z-50"
+        :style="{
+          left: `${dragPosition.x}px`,
+          top: `${dragPosition.y}px`,
+        }"
       />
     </div>
   </div>
