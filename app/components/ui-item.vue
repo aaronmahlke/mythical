@@ -29,10 +29,19 @@ function onPointerDown(event: PointerEvent) {
 
 const layout = computed(() => getRotatedLayout(item)[0]);
 const size = computed(() => getRotatedLayout(item)[1]);
+
+const imageTransform = computed(() => {
+  const rot = item.rot;
+  if (rot === 0) return 'none';
+  if (rot === 180) return 'rotate(180deg)';
+  const sx = size.value.width / size.value.height;
+  const sy = size.value.height / size.value.width;
+  return `scale(${sx}, ${sy}) rotate(${rot}deg)`;
+});
 </script>
 <template>
   <div
-    class="grid select-none"
+    class="grid select-none relative"
     :style="[
       `grid-template-rows: repeat(${size.height}, minmax(0, 1fr))`,
       `grid-template-columns: repeat(${size.width}, minmax(0, 1fr))`,
@@ -44,8 +53,8 @@ const size = computed(() => getRotatedLayout(item)[1]);
   >
     <img
       :src="item.ref.texture"
-      class="object-cover absolute inset-0 pointer-events-none"
-      :style="`transform: rotate(${item.rot}deg)`"
+      class="pointer-events-none absolute inset-0 size-full object-fill"
+      :style="{ transform: imageTransform }"
     />
     <div v-for="(cell, index) in layout" class="size-full">
       <div

@@ -1,36 +1,27 @@
 export function useInventory(size: number) {
-	const instance = new Inventory(size);
-	const state = shallowRef(instance);
+	const inventory = ref(new Inventory(size));
 
 	function tryAddItem(item: ItemInstance): boolean {
-		const result = instance.tryAddItem(item);
-		triggerRef(state);
-		return result;
+		return inventory.value.tryAddItem(item);
 	}
 
 	function tryUpdateItem(
 		item: ItemInstance,
 		newPos: InventoryPosition,
 	): boolean {
-		const result = instance.tryUpdateItem(item, newPos);
-		triggerRef(state);
-		return result;
+		return inventory.value.tryUpdateItem(item, newPos);
 	}
 
 	function deleteItem(item: ItemInstance): boolean {
-		const result = instance.deleteItem(item);
-		triggerRef(state);
-		return result;
+		return inventory.value.deleteItem(item);
 	}
 
 	function addItemToNextFreePos(item: Item): boolean {
-		const result = instance.addItemToNextFreePos(item);
-		triggerRef(state);
-		return result;
+		return inventory.value.addItemToNextFreePos(item);
 	}
 
 	return {
-		inventory: state,
+		inventory,
 		tryAddItem,
 		tryUpdateItem,
 		deleteItem,
