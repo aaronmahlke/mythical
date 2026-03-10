@@ -26,15 +26,18 @@ function onPointerDown(event: PointerEvent) {
   };
   emit("dragstart", item, offset, event);
 }
+
+const layout = computed(() => getRotatedLayout(item)[0]);
+const size = computed(() => getRotatedLayout(item)[1]);
 </script>
 <template>
   <div
     class="grid select-none"
     :style="[
-      `grid-template-rows: repeat(${item.ref.size.height}, minmax(0, 1fr))`,
-      `grid-template-columns: repeat(${item.ref.size.width}, minmax(0, 1fr))`,
-      `width: ${item.ref.size.width * cellSize}%`,
-      `height: ${item.ref.size.height * cellSize}%`,
+      `grid-template-rows: repeat(${size.height}, minmax(0, 1fr))`,
+      `grid-template-columns: repeat(${size.width}, minmax(0, 1fr))`,
+      `width: ${size.width * cellSize}%`,
+      `height: ${size.height * cellSize}%`,
     ]"
     style="background-size: 100%"
     ref="itemElement"
@@ -44,10 +47,10 @@ function onPointerDown(event: PointerEvent) {
       class="object-cover absolute inset-0 pointer-events-none"
       :style="`transform: rotate(${item.rot}deg)`"
     />
-    <div v-for="(cell, index) in item.ref.layout" class="size-full">
+    <div v-for="(cell, index) in layout" class="size-full">
       <div
         @pointerdown="onPointerDown"
-        v-if="item.ref.layout[index]"
+        v-if="layout[index]"
         class="size-full"
         :style="`background: ${item.ref.color}`"
       ></div>

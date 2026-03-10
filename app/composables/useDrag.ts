@@ -1,7 +1,6 @@
 type DragOptions = {
 	containerRef: Ref<HTMLElement | null>;
-	gridSize: number;
-	isFree: (item: ItemInstance, ignore?: ItemInstance) => boolean;
+	inventory: Inventory;
 	onDrop: (item: ItemInstance, pos: InventoryPosition) => void;
 };
 
@@ -12,7 +11,7 @@ export function useDrag(options: DragOptions) {
 	const grabOffset = ref({ x: 0, y: 0 });
 
 	const cellSize = computed(() =>
-		options.gridSize > 0 ? 100 / options.gridSize : 0,
+		options.inventory.size > 0 ? 100 / options.inventory.size : 0,
 	);
 
 	function startDrag(item: ItemInstance, offset: Offset, event: PointerEvent) {
@@ -52,6 +51,9 @@ export function useDrag(options: DragOptions) {
 		if (!isDragging.value || !draggedItem.value || !options.containerRef.value)
 			return null;
 		const rect = options.containerRef.value.getBoundingClientRect();
+		const gridSize = options.inventory.size;
+
+		const [, rotatedSize] = getRotatedLayout(draggedItem.value);
 
 		const percentX = ((pointerPos.value.x - rect.left) / rect.width) * 100;
 		const percentY = ((pointerPos.value.y - rect.top) / rect.height) * 100;
@@ -62,13 +64,10 @@ export function useDrag(options: DragOptions) {
 		const col = Math.round((percentX - grabOffsetPercentX) / cellSize.value);
 		const row = Math.round((percentY - grabOffsetPercentY) / cellSize.value);
 
-		const clampedCol = Math.max(
-			0,
-			Math.min(col, options.gridSize - draggedItem.value.ref.size.width),
-		);
+		const clampedCol = Math.max(0, Math.min(col, gridSize - rotatedSize.width));
 		const clampedRow = Math.max(
 			0,
-			Math.min(row, options.gridSize - draggedItem.value.ref.size.height),
+			Math.min(row, gridSize - rotatedSize.height),
 		);
 
 		return { col: clampedCol, row: clampedRow };
@@ -77,33 +76,23 @@ export function useDrag(options: DragOptions) {
 	const canPlace = computed(() => {
 		if (!previewPosition.value || !draggedItem.value) return false;
 
-		let currentItemInstance = JSON.parse(JSON.stringify(draggedItem.value));
-		draggedItem.value.pos = previewPosition.value;
+		const preview: ItemInstance = {
+			...draggedItem.value,
+			pos: previewPosition.value,
+		};
 
-		return options.isFree(draggedItem.value, currentItemInstance);
+		return options.inventory.isFree(preview, draggedItem.value);
 	});
 
 	const highlightedCells = computed<Set<number>>(() => {
-		const cells = new Set<number>();
-		if (!previewPosition.value || !draggedItem.value) return cells;
+		if (!previewPosition.value || !draggedItem.value) return new Set();
 
-		const item = draggedItem.value.ref;
-		const pos = previewPosition.value;
+		const preview: ItemInstance = {
+			...draggedItem.value,
+			pos: previewPosition.value,
+		};
 
-		for (const [index, cell] of item.layout.entries()) {
-			if (cell === 0) continue;
-			const row = Math.floor(index / item.size.width);
-			const col = index % item.size.width;
-
-			const inventoryRow = row + pos.row;
-			const inventoryCol = col + pos.col;
-
-			if (inventoryRow < options.gridSize && inventoryCol < options.gridSize) {
-				cells.add(inventoryRow * options.gridSize + inventoryCol);
-			}
-		}
-
-		return cells;
+		return options.inventory.getOccupiedCells(preview);
 	});
 
 	return {

@@ -7,17 +7,14 @@ const { size } = defineProps<Props>();
 
 const {
   inventory,
-  isFree,
   tryUpdateItem,
-  rotateLayoutCw,
   addItemToNextFreePos,
 } = useInventory(size);
 
 const itemsContainer = ref<HTMLElement | null>(null);
 const { startDrag, isDragging, draggedItem, dragPosition, highlightedCells } = useDrag({
   containerRef: itemsContainer,
-  gridSize: size,
-  isFree,
+  inventory: inventory.value,
   onDrop: (item, pos) => tryUpdateItem(item, pos),
 });
 
@@ -27,7 +24,7 @@ const cellSize = computed(() => {
 
 const uniqueItemInstances = computed(() => {
   let instances: Array<ItemInstance> = [];
-  for (let [index, item] of inventory.value.entries()) {
+  for (let [index, item] of inventory.value.grid.entries()) {
     if (!item) continue;
     if (instances.includes(item)) continue;
     instances.push(item);
@@ -47,8 +44,8 @@ function addRandomItem() {
 onKeyStroke("r", (e) => {
   e.preventDefault();
   if (!isDragging || !draggedItem.value) return;
-  draggedItem.value.ref = rotateLayoutCw(draggedItem.value?.ref);
-  draggedItem.value.rot += 90;
+  const nextRot = ((draggedItem.value.rot + 90) % 360) as InventoryRotation;
+  draggedItem.value.rot = nextRot;
 });
 </script>
 
