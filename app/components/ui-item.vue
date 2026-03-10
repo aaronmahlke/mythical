@@ -32,8 +32,8 @@ const size = computed(() => getRotatedLayout(item)[1]);
 
 const imageTransform = computed(() => {
   const rot = item.rot;
-  if (rot === 0) return 'none';
-  if (rot === 180) return 'rotate(180deg)';
+  if (rot === 0) return "none";
+  if (rot === 180) return "rotate(180deg)";
   const sx = size.value.width / size.value.height;
   const sy = size.value.height / size.value.width;
   return `scale(${sx}, ${sy}) rotate(${rot}deg)`;
@@ -41,7 +41,7 @@ const imageTransform = computed(() => {
 </script>
 <template>
   <div
-    class="grid select-none relative"
+    class="grid select-none"
     :style="[
       `grid-template-rows: repeat(${size.height}, minmax(0, 1fr))`,
       `grid-template-columns: repeat(${size.width}, minmax(0, 1fr))`,
@@ -61,7 +61,6 @@ const imageTransform = computed(() => {
         @pointerdown="onPointerDown"
         v-if="layout[index]"
         class="size-full"
-        :style="`background: ${item.ref.color}`"
       ></div>
       <div v-else class="pointer-events-none"></div>
     </div>

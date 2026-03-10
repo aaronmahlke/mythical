@@ -76,10 +76,8 @@ export function useDrag(options: DragOptions) {
 	const canPlace = computed(() => {
 		if (!previewPosition.value || !draggedItem.value) return false;
 
-		const preview: ItemInstance = {
-			...draggedItem.value,
-			pos: previewPosition.value,
-		};
+		const preview: ItemInstance = JSON.parse(JSON.stringify(draggedItem.value));
+		preview.pos = previewPosition.value;
 
 		return options.inventory.isFree(preview, draggedItem.value);
 	});
