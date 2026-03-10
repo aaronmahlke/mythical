@@ -9,12 +9,14 @@ export function useDrag(options: DragOptions) {
 	const draggedItem = ref<ItemInstance | null>(null);
 	const pointerPos = ref({ x: 0, y: 0 });
 	const grabOffset = ref({ x: 0, y: 0 });
+	const originalState = ref<{ pos: InventoryPosition; rot: InventoryRotation } | null>(null);
 
 	const cellSize = computed(() =>
 		options.inventory.size > 0 ? 100 / options.inventory.size : 0,
 	);
 
 	function startDrag(item: ItemInstance, offset: Offset, event: PointerEvent) {
+		originalState.value = { pos: { ...item.pos }, rot: item.rot };
 		draggedItem.value = item;
 		grabOffset.value = offset;
 		pointerPos.value = { x: event.clientX, y: event.clientY };
@@ -30,8 +32,12 @@ export function useDrag(options: DragOptions) {
 	function onPointerUp() {
 		if (draggedItem.value && previewPosition.value && canPlace.value) {
 			options.onDrop(draggedItem.value, previewPosition.value);
+		} else if (draggedItem.value && originalState.value) {
+			draggedItem.value.pos = originalState.value.pos;
+			draggedItem.value.rot = originalState.value.rot;
 		}
 
+		originalState.value = null;
 		isDragging.value = false;
 		draggedItem.value = null;
 		document.removeEventListener("pointermove", onPointerMove);
