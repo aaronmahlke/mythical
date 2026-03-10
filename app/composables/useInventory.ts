@@ -3,48 +3,39 @@ export function useInventory(size: number) {
 		Array(size * size).fill(null),
 	);
 
-	function tryAddItem(item: Item, pos: InventoryPosition): boolean {
-		if (!isFree(item, pos)) return false;
-		addItem(item, pos);
+	function tryAddItem(itemInstance: ItemInstance): boolean {
+		if (!isFree(itemInstance)) return false;
+		addItem(itemInstance);
 		return true;
 	}
 
 	function tryUpdateItem(
-		item: ItemInstance,
+		itemInstance: ItemInstance,
 		newPos: InventoryPosition,
 	): boolean {
-		if (!isFree(item.ref, newPos, item)) return false;
+		let newItemInstance = JSON.parse(JSON.stringify(itemInstance));
+		newItemInstance.pos = newPos;
 
-		deleteItem(item);
+		if (!isFree(newItemInstance, itemInstance)) return false;
 
-		// update the existing instance in-place instead of creating a new one
-		item.pos = newPos;
-
-		for (const [index, cell] of item.ref.layout.entries()) {
-			if (cell === 0) continue;
-			const row = Math.floor(index / item.ref.size.width);
-			const col = index % item.ref.size.width;
-
-			const inventoryRow = row + newPos.row;
-			const inventoryCol = col + newPos.col;
-
-			const inventoryIndex = inventoryRow * size + inventoryCol;
-			inventory.value[inventoryIndex] = item;
-		}
+		deleteItem(itemInstance);
+		itemInstance.pos = newPos;
+		addItem(itemInstance);
 
 		return true;
 	}
 
-	function isFree(item: Item, pos: InventoryPosition, ignore?: ItemInstance): boolean {
-		for (const [index, cell] of item.layout.entries()) {
+	function isFree(itemInstance: ItemInstance, ignore?: ItemInstance): boolean {
+		let [layout, itemSize] = getRotatedLayout(itemInstance);
+		for (const [index, cell] of layout.entries()) {
 			if (cell === 0) continue;
-			let row = (index - (index % item.size.width)) / item.size.width;
-			let col = index - row * item.size.width;
+			let row = (index - (index % itemSize.width)) / itemSize.width;
+			let col = index - row * itemSize.width;
 
-			const inventoryRow = row + pos.row;
-			const inventoryCol = col + pos.col;
+			const inventoryRow = row + itemInstance.pos.row;
+			const inventoryCol = col + itemInstance.pos.col;
 
-			if (inventoryCol < pos.col) return false;
+			if (inventoryCol < itemInstance.pos.col) return false;
 
 			if (inventoryRow >= size || inventoryCol >= size) return false;
 			const inventoryIndex = inventoryRow * size + inventoryCol;
@@ -54,26 +45,53 @@ export function useInventory(size: number) {
 		return true;
 	}
 
-	function addItem(item: Item, pos: InventoryPosition) {
-		console.log("addItem:", pos);
-		const itemInstance: ItemInstance = {
-			ref: item,
-			pos: pos,
-			rot: null,
-		};
+	function addItem(itemInstance: ItemInstance) {
+		let [layout, itemSize] = getRotatedLayout(itemInstance);
 
-		for (const [index, cell] of item.layout.entries()) {
+		for (const [index, cell] of layout.entries()) {
 			if (cell === 0) continue;
-			let row = (index - (index % item.size.width)) / item.size.width;
-			let col = index - row * item.size.width;
+			let row = (index - (index % itemSize.width)) / itemSize.width;
+			let col = index - row * itemSize.width;
 
-			const inventoryRow = row + pos.row;
-			const inventoryCol = col + pos.col;
+			const inventoryRow = row + itemInstance.pos.row;
+			const inventoryCol = col + itemInstance.pos.col;
 
 			const inventoryIndex = inventoryRow * size + inventoryCol;
 
 			inventory.value[inventoryIndex] = itemInstance;
 		}
+	}
+
+	function getRotatedLayout(
+		itemInstance: ItemInstance,
+	): [Array<number>, ItemSize] {
+		let layout = itemInstance.ref.layout;
+		let size = itemInstance.ref.size;
+		let rotation = itemInstance.rot;
+		if (rotation === 90)
+			return [
+				rotateBy90Deg(layout, size),
+				{ width: size.height, height: size.width },
+			];
+		if (rotation === 180) return [layout.reverse(), size];
+		if (rotation === 270)
+			return [
+				rotateBy90Deg(layout, size).reverse(),
+				{ width: size.height, height: size.width },
+			];
+		return [layout, size];
+	}
+
+	function rotateBy90Deg(layout: Array<number>, size: ItemSize): Array<number> {
+		let newLayout: Array<number> = [];
+		for (let col = 0; col <= size.width; col++) {
+			let newRow: Array<number> = [];
+			for (let row = 0; row <= size.height; row++) {
+				newRow.splice(0, 0, layout[row * size.width + col]!);
+			}
+			newLayout.concat(newRow);
+		}
+		return newLayout;
 	}
 
 	function deleteItem(item: ItemInstance): boolean {
@@ -90,10 +108,17 @@ export function useInventory(size: number) {
 	function addItemToNextFreePos(item: Item): boolean {
 		for (let row = 0; row < size; row++) {
 			for (let col = 0; col < size; col++) {
-				let pos = { row, col };
-				if (isFree(item, pos)) {
-					addItem(item, pos);
-					return true;
+				for (let rot = 0; rot < 270; rot += 90) {
+					let pos = { row, col };
+					let itemInstance: ItemInstance = {
+						ref: item,
+						pos,
+						rot: rot as InventoryRotation,
+					};
+					if (isFree(itemInstance)) {
+						addItem(itemInstance);
+						return true;
+					}
 				}
 			}
 		}
@@ -107,5 +132,6 @@ export function useInventory(size: number) {
 		tryUpdateItem,
 		isFree,
 		addItemToNextFreePos,
+		rotateLayoutCw: getRotatedLayout,
 	};
 }

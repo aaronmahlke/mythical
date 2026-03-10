@@ -1,15 +1,20 @@
 <script setup lang="ts">
 type Props = {
-  inventory: Array<ItemInstance | null>;
   size: number;
-  isFree: (item: Item, pos: InventoryPosition, ignore?: ItemInstance) => boolean;
-  tryUpdateItem: (item: ItemInstance, newPos: InventoryPosition) => boolean;
 };
 
-const { inventory, size, isFree, tryUpdateItem } = defineProps<Props>();
+const { size } = defineProps<Props>();
+
+const {
+  inventory,
+  isFree,
+  tryUpdateItem,
+  rotateLayoutCw,
+  addItemToNextFreePos,
+} = useInventory(size);
 
 const itemsContainer = ref<HTMLElement | null>(null);
-const { isDragging, draggedItem, dragPosition, highlightedCells } = useDrag({
+const { startDrag, isDragging, draggedItem, dragPosition, highlightedCells } = useDrag({
   containerRef: itemsContainer,
   gridSize: size,
   isFree,
@@ -22,12 +27,28 @@ const cellSize = computed(() => {
 
 const uniqueItemInstances = computed(() => {
   let instances: Array<ItemInstance> = [];
-  for (let [index, item] of inventory.entries()) {
+  for (let [index, item] of inventory.value.entries()) {
     if (!item) continue;
     if (instances.includes(item)) continue;
     instances.push(item);
   }
   return instances;
+});
+
+const itemBankItems = ref<Array<Item>>([]);
+
+function addRandomItem() {
+  const index = getRandomIntegerInclusive(0, sampleItems.length - 1);
+  if (sampleItems[index]) {
+    addItemToNextFreePos(sampleItems[index]);
+  }
+}
+
+onKeyStroke("r", (e) => {
+  e.preventDefault();
+  if (!isDragging || !draggedItem.value) return;
+  draggedItem.value.ref = rotateLayoutCw(draggedItem.value?.ref);
+  draggedItem.value.rot += 90;
 });
 </script>
 
@@ -52,6 +73,7 @@ const uniqueItemInstances = computed(() => {
         ]"
         :item="itemInstance"
         :grid-size="size"
+        @dragstart="startDrag"
       />
 
       <UiItem
@@ -66,4 +88,5 @@ const uniqueItemInstances = computed(() => {
       />
     </div>
   </div>
+  <ItemBank :items="itemBankItems" @add="addRandomItem" />
 </template>

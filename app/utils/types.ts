@@ -1,5 +1,6 @@
 export type Item = {
-	color: string;
+	color?: string;
+	texture?: string;
 	size: ItemSize;
 	layout: Array<number>;
 };
@@ -7,7 +8,7 @@ export type Item = {
 export type ItemInstance = {
 	ref: Item;
 	pos: InventoryPosition;
-	rot: InventoryRotation | null;
+	rot: InventoryRotation;
 };
 
 export type InventoryPosition = {
@@ -15,7 +16,7 @@ export type InventoryPosition = {
 	row: number;
 };
 
-export type InventoryRotation = "R0" | "R90" | "R180" | "R270";
+export type InventoryRotation = 0 | 90 | 180 | 270;
 
 export type ItemSize = {
 	width: number;
